@@ -190,8 +190,3 @@ class FraudETL:
 
 def run_ETL():
     FraudETL().run()
-
-
-if __name__ == "__main__":
-    # Esto permite ejecutar el archivo directamente
-    run_ETL()

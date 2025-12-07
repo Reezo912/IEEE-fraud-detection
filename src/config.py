@@ -18,19 +18,53 @@ class MLflowConfig(BaseModel):
     d_brick_schema: str = "default"
 
 
-class XGBParams(BaseModel):
-    n_estimators: int = 5000
-    learning_rate: float = 0.01
-    max_depth: int = 10
-    tree_method: str = "hist"
-    device: str = "cuda"  # Tu 4080
-    early_stopping: int = 100
+class RangeFloat(BaseModel):
+    low: float
+    high: float
+    log: bool = False
 
 
-class LGBMParams(BaseModel):
-    n_estimators: int = 5000
-    learning_rate: float = 0.01
-    device: str = "gpu"
+class RangeInt(BaseModel):
+    low: int
+    high: int
+
+
+class XGBConfigSearch(BaseModel):
+    learning_rate: RangeFloat = RangeFloat(low=0.005, high=0.1, log=True)
+    max_depth: RangeInt = RangeInt(low=6, high=15)
+    subsample: RangeFloat = RangeFloat(low=0.6, high=0.95)
+    colsample_bytree: RangeFloat = RangeFloat(low=0.6, high=0.95)
+    reg_alpha: RangeFloat = RangeFloat(low=0.1, high=10.0, log=True)
+    reg_lambda: RangeFloat = RangeFloat(low=0.1, high=10.0, log=True)
+    scale_pos_weight: RangeFloat = RangeFloat(low=1.0, high=15.0)
+
+
+class LGBMConfigSearch(BaseModel):
+    learning_rate: RangeFloat = RangeFloat(low=0.005, high=0.1, log=True)
+    num_leaves: RangeInt = RangeInt(low=20, high=300)  # Específico de LGBM
+    max_depth: RangeInt = RangeInt(low=-1, high=15)
+    subsample: RangeFloat = RangeFloat(low=0.6, high=0.95)
+    colsample_bytree: RangeFloat = RangeFloat(low=0.6, high=0.95)
+    reg_alpha: RangeFloat = RangeFloat(low=0.1, high=10.0, log=True)
+    reg_lambda: RangeFloat = RangeFloat(low=0.1, high=10.0, log=True)
+    scale_pos_weight: RangeFloat = RangeFloat(low=1.0, high=15.0)
+
+
+class CatConfigSearch(BaseModel):
+    learning_rate: RangeFloat = RangeFloat(low=0.005, high=0.1, log=True)
+    depth: RangeInt = RangeInt(low=4, high=10)
+    l2_leaf_reg: RangeFloat = RangeFloat(low=1.0, high=10.0, log=True)
+    random_strength: RangeFloat = RangeFloat(low=1e-9, high=10.0, log=True)
+    scale_pos_weight: RangeFloat = RangeFloat(low=1.0, high=15.0)
+
+
+class OptunaConfig(BaseModel):
+    n_trials: int = 50
+    direction: str = "maximize"
+    # Rangos específicos por modelo
+    xgboost_space: XGBConfigSearch = XGBConfigSearch()
+    lightgbm_space: LGBMConfigSearch = LGBMConfigSearch()
+    catboost_space: CatConfigSearch = CatConfigSearch()
 
 
 class Settings(BaseSettings):
@@ -40,12 +74,9 @@ class Settings(BaseSettings):
     paths: PathsConfig = PathsConfig()
     mlflow: MLflowConfig = MLflowConfig()
 
-    xgboost: XGBParams = XGBParams()
-    lightgbm: LGBMParams = LGBMParams()
-
     drop_cols: list[str] = ["isFraud", "TransactionID"]
     target: str = "isFraud"
+    optuna: OptunaConfig = OptunaConfig()
 
 
 settings = Settings()
-
