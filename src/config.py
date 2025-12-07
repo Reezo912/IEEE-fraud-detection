@@ -41,7 +41,7 @@ class XGBConfigSearch(BaseModel):
 
 class LGBMConfigSearch(BaseModel):
     learning_rate: RangeFloat = RangeFloat(low=0.005, high=0.1, log=True)
-    num_leaves: RangeInt = RangeInt(low=20, high=300)  # Específico de LGBM
+    num_leaves: RangeInt = RangeInt(low=20, high=300)
     max_depth: RangeInt = RangeInt(low=-1, high=15)
     subsample: RangeFloat = RangeFloat(low=0.6, high=0.95)
     colsample_bytree: RangeFloat = RangeFloat(low=0.6, high=0.95)
@@ -61,7 +61,6 @@ class CatConfigSearch(BaseModel):
 class OptunaConfig(BaseModel):
     n_trials: int = 50
     direction: str = "maximize"
-    # Rangos específicos por modelo
     xgboost_space: XGBConfigSearch = XGBConfigSearch()
     lightgbm_space: LGBMConfigSearch = LGBMConfigSearch()
     catboost_space: CatConfigSearch = CatConfigSearch()
