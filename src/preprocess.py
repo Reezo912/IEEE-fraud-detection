@@ -1,4 +1,4 @@
-from config import settings
+from src.config import settings
 
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as sf
@@ -75,9 +75,6 @@ class FraudETL:
                     "P_emaildomain_2": sf.when(
                         sf.size(sf.col("P_split")) > 1, sf.col("P_split").getItem(1)
                     ).otherwise(sf.lit(None)),
-                    # TRUCO: getItem(2) devuelve null si no existe, PERO si Spark está en modo ANSI falla.
-                    # Lo solucionamos forzando un cast o usando try_element_at si tu spark es >3.3
-                    # Solución universal: size check
                     "P_emaildomain_3": sf.when(
                         sf.size(sf.col("P_split")) > 2, sf.col("P_split").getItem(2)
                     ).otherwise(sf.lit(None)),
@@ -113,26 +110,26 @@ class FraudETL:
         return df
 
     def transform(self):
-        """ "Orquestator for feature engineering and encoding"""
-        print("Processing datasets... ")
+        print("   -> Processing datasets... ")
 
         df_train_fe = self._process_dataset(self.raw_train)
         df_test_fe = self._process_dataset(self.raw_test)
 
+        print("     Joining Train + Test for transformations of data... ")
+        df_train_fe = df_train_fe.withColumn("is_train", sf.lit(1))
+        df_test_fe = df_test_fe.withColumn("is_train", sf.lit(0))
+
+        full_df = df_train_fe.unionByName(df_test_fe, allowMissingColumns=True)
+
         cat_cols = [
             f.name
-            for f in df_train_fe.schema.fields
+            for f in full_df.schema.fields
             if isinstance(f.dataType, sf.StringType)
         ]
         outputcols = [c + "_idx" for c in cat_cols]
 
         if cat_cols:
-            print(f"      indexing {len(cat_cols)} categoric columns...")
-            # marcador
-            df_train_fe = df_train_fe.withColumn("is_train", sf.lit(1))
-            df_test_fe = df_test_fe.withColumn("is_train", sf.lit(0))
-
-            full_df = df_train_fe.unionByName(df_test_fe, allowMissingColumns=True)
+            print(f"      Indexing {len(cat_cols)} categoric columns...")
 
             indexer = StringIndexer(
                 inputCols=cat_cols,
@@ -140,18 +137,20 @@ class FraudETL:
                 handleInvalid="keep",
             )
             full_encoded = indexer.fit(full_df).transform(full_df)
+
             full_encoded = full_encoded.drop(*cat_cols)
 
-            # separar
             self.final_train = full_encoded.filter(sf.col("is_train") == 1).drop(
                 "is_train"
             )
             self.final_test = full_encoded.filter(sf.col("is_train") == 0).drop(
-                "is_train", "isfraud"
+                "is_train", "isFraud"
             )
         else:
-            self.final_train = df_train_fe
-            self.final_test = df_test_fe
+            self.final_train = full_df.filter(sf.col("is_train") == 1).drop("is_train")
+            self.final_test = full_df.filter(sf.col("is_train") == 0).drop(
+                "is_train", "isFraud"
+            )
 
     def load(self):
         """ "Final save"""

@@ -1,8 +1,8 @@
-from typing import final
 import mlflow
 import pandas as pd
 from sklearn.metrics import roc_auc_score
-from config import settings
+
+from src.config import settings
 
 
 class EnsambleValidator:
@@ -23,16 +23,18 @@ class EnsambleValidator:
         preds_dict = {}
 
         for model in self.models_to_load:
-            model_uri = f"models:/{settings.mlflow.catalog}.{settings.mlflow.schema}.{model}_prod/latest"
+            full_name = f"{settings.mlflow.catalog}.{settings.mlflow.d_brick_schema}.{model}_prod"
+
+            model_uri = f"models:/{full_name}@Champion"
             print(f"    Loading {model} from: {model_uri}")
 
             try:
-                model = mlflow.sklearn.load_model(model_uri)
+                loaded_model = mlflow.sklearn.load_model(model_uri)
 
-                prob = model.predict_proba(self.X_val)[:, 1]
+                prob = loaded_model.predict_proba(self.X_val)[:, 1]
                 preds_dict[model] = prob
 
-                auc = roc_auc_score(self.X_val)[:, 1]
+                auc = roc_auc_score(self.y_val, prob)
                 print(f"    {model} AUC: {auc:.5f}")
 
             except Exception as e:
@@ -60,7 +62,7 @@ class EnsambleValidator:
         ensemble_auc = roc_auc_score(self.y_val, final_pred)
         print(f"ENSEMBLE AUC: {ensemble_auc:.5f}")
 
-        best_single = max([roc_auc_score(self.y_val, p) for p in preds.values])
+        best_single = max([roc_auc_score(self.y_val, p) for p in preds.values()])
         lift = ensemble_auc - best_single
         print(f"Improve over best single model: +{lift:.5f}")
 

@@ -1,8 +1,9 @@
-from config import settings
+from src.config import settings
 
 import pandas as pd
 import mlflow
 from mlflow.models import infer_signature
+from mlflow import MlflowClient
 
 import xgboost as xgb
 import lightgbm as lgb
@@ -30,7 +31,7 @@ class ModelBuilder:
     def _cast_params(self, raw_params: dict) -> dict:
         """Clean the param output of MLflow"""
         clean = {}
-        # Lista negra de params internos que no queremos pasar al constructor
+
         ignored_keys = [
             "device",
             "task_type",
@@ -67,7 +68,7 @@ class ModelBuilder:
         return clean
 
     def get_best_params(self) -> dict:
-        print("Looking for best params for {self.model_name")
+        print("Looking for best params for {self.model_name}")
 
         query = f"tags.model_type = '{self.model_name}' and tags.type = 'tuning_trial'"
         runs = mlflow.search_runs(
@@ -111,6 +112,8 @@ class ModelBuilder:
             ), final_params
 
         elif self.model_name == "catboost":
+            if "device" in final_params:
+                del final_params["device"]
             return cb.CatBoostClassifier(**final_params, verbose=False), final_params
 
         else:
@@ -161,7 +164,6 @@ class Trainer:
                     self.X_train,
                     self.y_train,
                     eval_set=[(self.X_val, self.y_val)],
-                    early_stopping_rounds=100,
                 )
             elif model_name == "lightgbm":
                 model.fit(
@@ -169,7 +171,6 @@ class Trainer:
                     self.y_train,
                     eval_set=[(self.X_val, self.y_val)],
                     callbacks=[lgb.early_stopping(100, verbose=False)],
-                    early_stopping_rounds=100,
                 )
             elif model_name == "catboost":
                 model.fit(
@@ -184,7 +185,8 @@ class Trainer:
             print(f"Best AUC: {auc:.2f}")
 
             signature = infer_signature(self.X_val.head(), y_proba[:5])
-            mlflow.sklearn.log_model(
+
+            model_info = mlflow.sklearn.log_model(
                 model,
                 artifact_path="model",
                 signature=signature,
@@ -192,6 +194,16 @@ class Trainer:
                 registered_model_name=full_name,
             )
             print("Model registered in: ", full_name)
+
+            print(
+                f"   -> Asigning 'Champion' alias to version: {model_info.registered_model_version}..."
+            )
+            client = MlflowClient()
+            client.set_registered_model_alias(
+                name=full_name,
+                alias="Champion",
+                version=model_info.registered_model_version,
+            )
 
     def run(self, models_to_train: list[str] = None):
         if models_to_train is None:
@@ -207,4 +219,3 @@ def train_model(model_name: str):
         trainer.run()
     else:
         trainer.run([model_name])
-

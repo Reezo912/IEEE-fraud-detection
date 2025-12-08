@@ -1,8 +1,11 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).parent.parent.resolve()
+
+load_dotenv()
 
 
 class PathsConfig(BaseModel):
@@ -16,6 +19,32 @@ class MLflowConfig(BaseModel):
     experiment_name: str = "/Shared/Fraud_detection"
     catalog: str = "workspace"
     d_brick_schema: str = "default"
+
+
+class XGBParams(BaseModel):
+    n_estimators: int = 5000
+    learning_rate: float = 0.01
+    max_depth: int = 10
+    tree_method: str = "hist"
+    device: str = "cuda"  # Tienes una 4080
+    eval_metric: str = "auc"
+    early_stopping_rounds: int = 100
+
+
+class LGBMParams(BaseModel):
+    n_estimators: int = 5000
+    learning_rate: float = 0.01
+    num_leaves: int = 256
+    device: str = "cpu"
+    metric: str = "auc"
+
+
+class CatParams(BaseModel):
+    iterations: int = 5000
+    learning_rate: float = 0.01
+    depth: int = 10
+    task_type: str = "GPU"
+    eval_metric: str = "AUC"
 
 
 class RangeFloat(BaseModel):
@@ -59,7 +88,7 @@ class CatConfigSearch(BaseModel):
 
 
 class OptunaConfig(BaseModel):
-    n_trials: int = 50
+    n_trials: int = 50  # default 50
     direction: str = "maximize"
     xgboost_space: XGBConfigSearch = XGBConfigSearch()
     lightgbm_space: LGBMConfigSearch = LGBMConfigSearch()
@@ -73,9 +102,14 @@ class Settings(BaseSettings):
     paths: PathsConfig = PathsConfig()
     mlflow: MLflowConfig = MLflowConfig()
 
+    id_col: str = "TransactionID"
     drop_cols: list[str] = ["isFraud", "TransactionID"]
     target: str = "isFraud"
     optuna: OptunaConfig = OptunaConfig()
+
+    xgboost: XGBParams = XGBParams()
+    lightgbm: LGBMParams = LGBMParams()
+    catboost: CatParams = CatParams()
 
 
 settings = Settings()

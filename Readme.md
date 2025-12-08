@@ -1,98 +1,145 @@
-# IEEE Fraud Detection Pipeline 🕵️‍♂️
+# IEEE-CIS Fraud Detection: Production MLOps Pipeline 🕵️‍♂️
 
-Un sistema MLOps de detección de fraude modular, escalable y preparado para producción ("Production-Ready"), diseñado para la competición **IEEE-CIS Fraud Detection** de Kaggle.
+A modular, scalable, and **production-ready** machine learning pipeline designed for the Kaggle [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection) competition.
 
-Este proyecto implementa un pipeline completo desde la ingestión de datos crudos hasta la inferencia, utilizando tecnologías modernas para asegurar reproducibilidad y rendimiento.
+This project moves beyond standard Jupyter Notebooks, implementing a robust engineering architecture that orchestrates the entire lifecycle: from PySpark ETL and Bayesian Hyperparameter Tuning to Ensemble Inference.
 
-## 🏗 Arquitectura del Proyecto
+## 🏗 Project Architecture
 
-El código sigue una estructura modular separando configuración, lógica de negocio y ejecución.
+The codebase follows a modular design, separating configuration, business logic, and execution control.
 
 ```text
 ieee_fraud_detection/
-├── data/                   # Datos (Raw, Processed, Submissions) - Ignorado en Git
-├── scripts/                # Puntos de entrada (CLI)
-│   └── run_pipeline.py     # Orquestador principal
-├── src/                    # Lógica de Negocio (Paquete Python)
-│   ├── config.py           # Configuración tipada (Pydantic)
-│   ├── preprocess.py       # ETL con PySpark (Train/Test consistencia)
-│   ├── training.py         # Entrenamiento (XGBoost/LightGBM/CatBoost)
-│   ├── ensemble.py         # Lógica de validación cruzada
-│   └── inference.py        # Generación de predicciones
-├── requirements.txt        # Dependencias
-└── README.md               # Documentación
+├── data/                   # Data storage (Raw, Processed, Submissions) - Ignored in Git
+├── scripts/                # CLI Entry Points
+│   └── run_pipeline.py     # Main Orchestrator (The "Control Center")
+├── src/                    # Core Logic (Python Package)
+│   ├── config.py           # Typed Configuration (Pydantic)
+│   ├── preprocess.py       # PySpark ETL (Train/Test consistency, Time-split)
+│   ├── tuning.py           # Optuna Optimization Engine
+│   ├── training.py         # Model Factory & Training (XGB/LGBM/Cat)
+│   ├── ensemble.py         # Validation & Blending Logic
+│   └── inference.py        # Final Submission Generation
+├── .env                    # Secrets & MLflow Config (Not committed)
+├── requirements.txt        # Project Dependencies
+└── README.md               # Documentation
 ```
 
-## 🛠 Stack Tecnológico
+## 🛠 Tech Stack
 
-* **ETL & Big Data:** PySpark 3.x (Manejo de grandes volúmenes y Feature Engineering).
-* **Modelado:** XGBoost (GPU Accelerated), LightGBM, CatBoost.
-* **Optimización:** Optuna (Búsqueda Bayesiana de Hiperparámetros).
-* **MLOps:** MLflow (Experiment Tracking & Model Registry).
-* **Configuración:** Pydantic (Validación de tipos y gestión de entornos).
+* **ETL & Big Data:** **PySpark 3.x** (Handling large datasets, robust Feature Engineering, and categorical encoding).
+* **Modeling:** **XGBoost**, **LightGBM**, **CatBoost** (GPU Accelerated).
+* **Optimization:** **Optuna** (Automated Bayesian Hyperparameter Tuning).
+* **MLOps:** **MLflow** (Experiment Tracking, Artifact Storage, and Model Registry).
+* **Configuration:** **Pydantic** (Type-safe configuration and environment management).
 
-## 🚀 Quick Start
+## 🚀 Quick Start (How to Replicate)
 
-### 1. Instalación
+Follow these steps to set up the project on a new machine.
 
-Se recomienda usar un entorno virtual con Python 3.10+.
+### 1. Clone and Install
+
+It is recommended to use a virtual environment with Python 3.10+.
 
 ```bash
-# Crear entorno (opcional)
+# Clone the repository
+git clone https://github.com/your-username/ieee-fraud-detection.git
+cd ieee-fraud-detection
+
+# Create environment (Optional but recommended)
 conda create -n fraud_detection python=3.10
 conda activate fraud_detection
 
-# Instalar dependencias
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Preparación de Datos
+### 2. Environment Configuration (.env)
 
-Descarga los datasets de la competición (train_transaction.csv, train_identity.csv, etc.) y colócalos en: `data/raw/`
+This project uses `python-dotenv` to manage secrets. You must create a `.env` file in the root directory to configure MLflow and Databricks access.
 
-### 3. Ejecución del Pipeline
+Create a file named `.env` and add the following credentials:
 
-El proyecto se controla mediante un único script CLI: `scripts/run_pipeline.py`.
+```ini
+# .env file example
 
-**Paso 1: Preprocesamiento (ETL)**
+# MLflow Tracking URI (e.g., databricks, http://localhost:5000, or file:./mlruns)
+MLFLOW_TRACKING_URI=databricks
 
-Limpia los datos, genera features temporales, gestiona nulos y crea los archivos Parquet optimizados. Asegura consistencia entre Train y Test.
+# Databricks Credentials (Required if using Databricks for tracking)
+DATABRICKS_HOST=https://<your-databricks-workspace-url>
+DATABRICKS_TOKEN=dapi<your-personal-access-token>
+
+# MLflow Experiment Path
+MLFLOW_EXPERIMENT_NAME=/Shared/Fraud_detection
+```
+
+### 3. Data Setup
+
+Download the competition datasets (`train_transaction.csv`, `train_identity.csv`, etc.) and place them in:
+`data/raw/`
+
+### 4. Pipeline Execution
+
+The entire project is controlled via a single CLI entry point: `scripts/run_pipeline.py`.
+
+#### 🔹 Step 1: Preprocessing (ETL)
+
+Cleans data, generates time-based features, handles nulls, ensures Train/Test schema consistency, and saves optimized Parquet files.
 
 ```bash
 python scripts/run_pipeline.py preprocess
 ```
 
-**Paso 2: Entrenamiento**
+#### 🔹 Step 2: Hyperparameter Tuning (Optuna)
 
-Entrena el modelo especificado utilizando GPU. Los experimentos y artefactos se registran automáticamente en MLflow.
+Runs Bayesian optimization to find the best parameters for each model. Results are logged to MLflow.
 
 ```bash
-# Entrenar XGBoost (Default)
-python scripts/run_pipeline.py train --model xgboost
+# Tune all models sequentially
+python scripts/run_pipeline.py tune --model all
 
-# Entrenar todos los modelos para Ensemble
+# Tune a specific model
+python scripts/run_pipeline.py tune --model xgboost
+```
+
+#### 🔹 Step 3: Training
+
+Retrieves the best parameters from MLflow (or config defaults), trains the final models on the full dataset, and registers them in the MLflow Model Registry with the `@Champion` alias.
+
+```bash
 python scripts/run_pipeline.py train --model all
 ```
 
-**Paso 3: Validación (Ensemble Local)**
+#### 🔹 Step 4: Validation (Ensemble)
 
-Carga los modelos registrados y calcula el AUC combinado en el set de validación.
+Loads the registered `@Champion` models, predicts on the validation set, and calculates the Ensemble AUC.
 
 ```bash
 python scripts/run_pipeline.py ensemble
 ```
 
-**Paso 4: Inferencia (Kaggle Submission)**
+#### 🔹 Step 5: Inference (Submission)
 
-Genera el archivo `submission.csv` final utilizando los modelos entrenados.
+Generates the final `submission.csv` for Kaggle using the weighted ensemble.
 
 ```bash
 python scripts/run_pipeline.py predict
 ```
 
-## 📊 Resultados Actuales
+### ⚡ The "One-Click" Command
 
-* **Single Model (XGBoost Tuned):** AUC ~0.922 (Validación Temporal).
-* **Hardware:** Optimizado para NVIDIA RTX 4080 / AMD Ryzen 9800X3D.
+To run the entire pipeline from start to finish (ETL -> Train -> Validation -> Inference):
 
-Proyecto desarrollado para IEEE-CIS Fraud Detection.
+```bash
+python scripts/run_pipeline.py all
+```
+
+## 📊 Performance
+
+* **Single Model (XGBoost Tuned):** AUC ~0.922 (Time-based Validation).
+* **Ensemble:** Targeting >0.94 AUC.
+* **Hardware:** Optimized for NVIDIA RTX 4080 / AMD Ryzen 9800X3D.
+
+---
+*Project developed for the IEEE-CIS Fraud Detection Challenge.*
