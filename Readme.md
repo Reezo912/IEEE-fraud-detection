@@ -1,5 +1,12 @@
 # IEEE-CIS Fraud Detection: Production MLOps Pipeline 🕵️‍♂️
 
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![PySpark](https://img.shields.io/badge/PySpark-3.4.1-yellowgreen)](https://spark.apache.org/)
+[![MLflow](https://img.shields.io/badge/MLflow-2.9.2-blue)](https://mlflow.org/)
+[![Databricks](https://img.shields.io/badge/Databricks-Cloud%20MLops-orange)](https://databricks.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Open Source](https://img.shields.io/badge/Open-Source-blue)](https://github.com/reezo912/ieee-fraud-detection)
+
 A modular, scalable, and **production-ready** machine learning pipeline designed for the Kaggle [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection) competition.
 
 This project moves beyond standard Jupyter Notebooks, implementing a robust engineering architecture that orchestrates the entire lifecycle: from PySpark ETL and Bayesian Hyperparameter Tuning to Ensemble Inference.
@@ -30,20 +37,51 @@ ieee_fraud_detection/
 * **ETL & Big Data:** **PySpark 3.x** (Handling large datasets, robust Feature Engineering, and categorical encoding).
 * **Modeling:** **XGBoost**, **LightGBM**, **CatBoost** (GPU Accelerated).
 * **Optimization:** **Optuna** (Automated Bayesian Hyperparameter Tuning).
-* **MLOps:** **MLflow** (Experiment Tracking, Artifact Storage, and Model Registry).
-* **Configuration:** **Pydantic** (Type-safe configuration and environment management).
+* **MLOps:**
+  - **MLflow** (Experiment Tracking, Artifact Storage, and Model Registry)
+  - **Databricks MLflow Integration** (Cloud-based experiment tracking and model deployment)
+  - **Pydantic** (Type-safe configuration and environment management).
+
+## 🔥 Databricks Cloud Integration
+
+This pipeline is optimized for **Databricks MLflow Tracking**:
+
+**Key Features:**
+- Seamless integration with Databricks MLflow backend
+- Cloud-based experiment tracking and artifact storage
+- Collaborative environment for team-based ML development
+
+**Configuration:**
+The `.env` file connects to your Databricks workspace:
+```ini
+# .env file example
+
+# MLflow Tracking URI (e.g., databricks, http://localhost:5000, or file:./mlruns)
+MLFLOW_TRACKING_URI=databricks
+
+# Databricks Credentials (Required if using Databricks for tracking)
+DATABRICKS_HOST=https://<your-databricks-workspace-url>
+DATABRICKS_TOKEN=dapi<your-personal-access-token>
+
+# MLflow Experiment Path
+MLFLOW_EXPERIMENT_NAME=/Shared/Fraud_detection
+```
+
+**Benefits:**
+- No local storage required for experiments (all artifacts in cloud)
+- Easy model promotion to production via Databricks Model Serving
+- Team access control and audit logs built-in
+- Scalable training on Databricks clusters
 
 ## 🚀 Quick Start (How to Replicate)
 
 Follow these steps to set up the project on a new machine.
 
-### 1. Clone and Install
-
-It is recommended to use a virtual environment with Python 3.10+.
+### Option A: Local Setup (for development)
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ieee-fraud-detection.git
+git clone https://github.com/reezo912/ieee-fraud-detection.git
 cd ieee-fraud-detection
 
 # Create environment (Optional but recommended)
@@ -53,6 +91,17 @@ conda activate fraud_detection
 # Install dependencies
 pip install -r requirements.txt
 ```
+
+### Option B: Databricks Cloud Deployment
+1. Create a Databricks cluster with GPU drivers
+2. Install requirements via `%pip install -r requirements.txt`
+3. Mount your data storage (DBFS or cloud storage)
+4. Configure `.env` with Databricks credentials
+
+**Recommended:** Use Databricks for production runs to leverage:
+- Distributed training across workers
+- Auto-scaling clusters
+- Built-in MLflow tracking
 
 ### 2. Environment Configuration (.env)
 
@@ -135,11 +184,24 @@ To run the entire pipeline from start to finish (ETL -> Train -> Validation -> I
 python scripts/run_pipeline.py all
 ```
 
-## 📊 Performance
+## 📊 Performance & Results
 
-* **Single Model (XGBoost Tuned):** AUC ~0.922 (Time-based Validation).
-* **Ensemble:** Targeting >0.94 AUC.
-* **Hardware:** Optimized for NVIDIA RTX 4080 / AMD Ryzen 9800X3D.
+**Kaggle Competition Results:**
+- Private Score: 0.887156 (Final ranking score)
+- Public Score: 0.900263 (Leaderboard validation)
+
+**Databricks Cloud Benefits:**
+- Experiment tracking scales to thousands of runs
+- Model registry enables CI/CD pipelines for ML
+
+
+## 🚀 Deployment Options
+
+### Local Deployment
+For development and testing:
+```bash
+python scripts/run_pipeline.py all
+```
 
 ---
-*Project developed for the IEEE-CIS Fraud Detection Challenge.*
+*Project developed and validated through participation in Kaggle's IEEE-CIS Fraud Detection Competition*
